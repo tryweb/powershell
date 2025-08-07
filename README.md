@@ -7,6 +7,7 @@ A comprehensive collection of PowerShell functions and aliases that bring famili
 - **grep**: Text search and pattern matching using Select-String
 - **top/htop**: Real-time process monitoring with system resource display
 - **watch**: Periodic command execution with difference highlighting
+- **Hash utilities**: md5sum, sha256sum, and other hash functions for file integrity
 - **System monitoring utilities**: File, process, and resource watchers
 - **Cross-platform familiarity**: Use Linux commands on Windows seamlessly
 
@@ -17,6 +18,7 @@ A comprehensive collection of PowerShell functions and aliases that bring famili
   - [grep](#grep---text-search)
   - [top/htop](#tophtop---process-monitoring)
   - [watch](#watch---periodic-execution)
+  - [Hash Functions](#hash-functions---file-integrity)
 - [System Monitoring](#system-monitoring)
 - [Usage Examples](#usage-examples)
 - [Aliases Reference](#aliases-reference)
@@ -155,6 +157,57 @@ watch-process "notepad"
 watch-system
 ```
 
+### Hash Functions - File Integrity
+
+Calculate and verify file checksums using various hash algorithms.
+
+#### Basic Usage
+```powershell
+# Calculate MD5 hash
+md5sum "file.txt"
+md5sum "*.pdf"
+
+# Calculate SHA256 hash
+sha256sum "document.pdf" 
+sha256sum "folder\*.*"
+
+# Other hash algorithms
+sha1sum "file.txt"
+sha512sum "archive.zip"
+```
+
+#### Hash Verification
+```powershell
+# Create checksum file
+sha256sum "*.txt" > checksums.sha256
+
+# Verify checksums
+sha256sum -Check checksums.sha256
+
+# Check specific checksum file
+sha256sum -CheckFile "checksums.sha256"
+
+# Verify individual files
+md5sum -Check hash_file.md5
+```
+
+#### Advanced Hash Operations
+```powershell
+# Batch directory hashing
+Get-DirectoryHash -Path "C:\Documents" -Algorithm SHA256
+
+# Recursive hash calculation
+Get-DirectoryHash -Path "." -Recursive -OutputFile "all_files.sha256"
+
+# Custom hash reporting
+Get-Hash "*.jpg" -Algorithm MD5 -UpperCase | Format-Table
+
+# Compare file integrity
+$hash1 = (md5sum "file1.txt").Split()[0]
+$hash2 = (md5sum "file2.txt").Split()[0]
+if ($hash1 -eq $hash2) { "Files are identical" }
+```
+
 ## 🔍 System Monitoring
 
 ### File Monitoring
@@ -217,6 +270,23 @@ w "Get-NetTCPConnection | Where State -eq 'Established' | Measure"
 w "Get-Service | Where Status -eq 'Running' | Measure"
 ```
 
+### Hash Verification Examples
+```powershell
+# Download file integrity verification
+sha256sum "ubuntu-22.04.iso"
+# Compare with official hash: a4acfda10b18da50e2ec50ccaf860d7f20b389df8765611142305c0e911d16fd
+
+# Create backup checksums
+md5sum "backup\*.*" > backup_checksums.md5
+
+# Verify backup integrity later
+md5sum -Check backup_checksums.md5
+
+# Security monitoring
+Get-DirectoryHash -Path "C:\CriticalFiles" -OutputFile "baseline.sha256"
+# Later: compare with new scan to detect changes
+```
+
 ## 📖 Aliases Reference
 
 | Alias | Command | Description |
@@ -230,6 +300,13 @@ w "Get-Service | Where Status -eq 'Running' | Measure"
 | `wf` | `watch-file` | File change monitoring |
 | `wp` | `watch-process` | Process monitoring |
 | `ws` | `watch-system` | System resource monitoring |
+| `md5sum` | `md5sum` | MD5 hash calculation and verification |
+| `sha1sum` | `sha1sum` | SHA1 hash calculation |
+| `sha256sum` | `sha256sum` | SHA256 hash calculation and verification |
+| `sha512sum` | `sha512sum` | SHA512 hash calculation |
+| `checksum` | `Get-FileHash` | General file hash calculation |
+| `hash` | `Get-Hash` | Advanced hash operations |
+| `dirhash` | `Get-DirectoryHash` | Directory hash calculation |
 
 ## 🛠️ Troubleshooting
 
@@ -262,15 +339,17 @@ watch "command" -Interval 5
 
 ## 🎯 Features Overview
 
-| Feature | grep | top | watch |
-|---------|------|-----|-------|
-| Real-time updates | ❌ | ✅ | ✅ |
-| Pattern matching | ✅ | ❌ | ❌ |
-| Customizable intervals | ❌ | ✅ | ✅ |
-| Difference highlighting | ❌ | ❌ | ✅ |
-| Pipeline support | ✅ | ❌ | ❌ |
-| File monitoring | ❌ | ❌ | ✅ |
-| Resource usage display | ❌ | ✅ | ✅ |
+| Feature | grep | top | watch | hash |
+|---------|------|-----|-------|------|
+| Real-time updates | ❌ | ✅ | ✅ | ❌ |
+| Pattern matching | ✅ | ❌ | ❌ | ❌ |
+| Customizable intervals | ❌ | ✅ | ✅ | ❌ |
+| Difference highlighting | ❌ | ❌ | ✅ | ❌ |
+| Pipeline support | ✅ | ❌ | ❌ | ✅ |
+| File monitoring | ❌ | ❌ | ✅ | ❌ |
+| Resource usage display | ❌ | ✅ | ✅ | ❌ |
+| Integrity verification | ❌ | ❌ | ❌ | ✅ |
+| Batch processing | ✅ | ❌ | ❌ | ✅ |
 
 ## 🤝 Contributing
 
@@ -288,6 +367,9 @@ Contributions are welcome! Here's how you can help:
 - Add configuration file support
 - Enhance error handling
 - Add unit tests
+- Improve hash verification output formatting
+- Add support for more hash algorithms (CRC32, BLAKE2, etc.)
+- Create interactive hash comparison tools
 
 ## 📝 License
 

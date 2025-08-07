@@ -405,3 +405,307 @@ Set-Alias w watch
 Set-Alias wf watch-file
 Set-Alias wp watch-process
 Set-Alias ws watch-system
+
+# PowerShell Hash Functions - Similar to Linux md5sum and sha256sum
+
+function md5sum {
+    param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, Position=0)]
+        [string[]]$Path,
+        
+        [switch]$Check,
+        [switch]$Binary,
+        [switch]$Text,
+        [string]$CheckFile
+    )
+    
+    process {
+        foreach ($file in $Path) {
+            # 檢查模式 - 驗證 hash 文件
+            if ($Check -or $CheckFile) {
+                $hashFile = if ($CheckFile) { $CheckFile } else { $file }
+                
+                if (-not (Test-Path $hashFile)) {
+                    Write-Host "md5sum: ${hashFile}: No such file or directory" -ForegroundColor Red
+                    continue
+                }
+                
+                Get-Content $hashFile | ForEach-Object {
+                    $line = $_.Trim()
+                    if ($line -and -not $line.StartsWith("#")) {
+                        # 解析格式: hash *filename 或 hash  filename
+                        if ($line -match "^([a-fA-F0-9]{32})\s+\*?(.+)$") {
+                            $expectedHash = $matches[1].ToLower()
+                            $fileName = $matches[2]
+                            
+                            if (Test-Path $fileName) {
+                                try {
+                                    $actualHash = (Get-FileHash -Path $fileName -Algorithm MD5).Hash.ToLower()
+                                    
+                                    if ($expectedHash -eq $actualHash) {
+                                        Write-Host "${fileName}: OK" -ForegroundColor Green
+                                    } else {
+                                        Write-Host "${fileName}: FAILED" -ForegroundColor Red
+                                    }
+                                } catch {
+                                    Write-Host "${fileName}: FAILED open or read" -ForegroundColor Red
+                                }
+                            } else {
+                                Write-Host "${fileName}: FAILED open or read" -ForegroundColor Red
+                            }
+                        }
+                    }
+                }
+                continue
+            }
+            
+            # 支援萬用字元
+            $files = Get-ChildItem -Path $file -File -ErrorAction SilentlyContinue
+            
+            if (-not $files) {
+                Write-Host "md5sum: ${file}: No such file or directory" -ForegroundColor Red
+                continue
+            }
+            
+            foreach ($f in $files) {
+                try {
+                    $hash = Get-FileHash -Path $f.FullName -Algorithm MD5
+                    
+                    # 格式化輸出 (類似 Linux md5sum)
+                    $indicator = if ($Binary) { "*" } else { " " }
+                    $hashOutput = $hash.Hash.ToLower() + $indicator + $f.Name
+                    
+                    Write-Output $hashOutput
+                } catch {
+                    Write-Host "md5sum: $($f.Name): $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+        }
+    }
+}
+
+function sha256sum {
+    param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, Position=0)]
+        [string[]]$Path,
+        
+        [switch]$Check,
+        [switch]$Binary,
+        [switch]$Text,
+        [string]$CheckFile
+    )
+    
+    process {
+        foreach ($file in $Path) {
+            # 檢查模式 - 驗證 hash 文件
+            if ($Check -or $CheckFile) {
+                $hashFile = if ($CheckFile) { $CheckFile } else { $file }
+                
+                if (-not (Test-Path $hashFile)) {
+                    Write-Host "sha256sum: ${hashFile}: No such file or directory" -ForegroundColor Red
+                    continue
+                }
+                
+                Get-Content $hashFile | ForEach-Object {
+                    $line = $_.Trim()
+                    if ($line -and -not $line.StartsWith("#")) {
+                        # 解析格式: hash *filename 或 hash  filename
+                        if ($line -match "^([a-fA-F0-9]{64})\s+\*?(.+)$") {
+                            $expectedHash = $matches[1].ToLower()
+                            $fileName = $matches[2]
+                            
+                            if (Test-Path $fileName) {
+                                try {
+                                    $actualHash = (Get-FileHash -Path $fileName -Algorithm SHA256).Hash.ToLower()
+                                    
+                                    if ($expectedHash -eq $actualHash) {
+                                        Write-Host "${fileName}: OK" -ForegroundColor Green
+                                    } else {
+                                        Write-Host "${fileName}: FAILED" -ForegroundColor Red
+                                    }
+                                } catch {
+                                    Write-Host "${fileName}: FAILED open or read" -ForegroundColor Red
+                                }
+                            } else {
+                                Write-Host "${fileName}: FAILED open or read" -ForegroundColor Red
+                            }
+                        }
+                    }
+                }
+                continue
+            }
+            
+            # 支援萬用字元
+            $files = Get-ChildItem -Path $file -File -ErrorAction SilentlyContinue
+            
+            if (-not $files) {
+                Write-Host "sha256sum: ${file}: No such file or directory" -ForegroundColor Red
+                continue
+            }
+            
+            foreach ($f in $files) {
+                try {
+                    $hash = Get-FileHash -Path $f.FullName -Algorithm SHA256
+                    
+                    # 格式化輸出 (類似 Linux sha256sum)
+                    $indicator = if ($Binary) { "*" } else { " " }
+                    $hashOutput = $hash.Hash.ToLower() + $indicator + $f.Name
+                    
+                    Write-Output $hashOutput
+                } catch {
+                    Write-Host "sha256sum: $($f.Name): $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+        }
+    }
+}
+
+# 其他 hash 算法函數
+function sha1sum {
+    param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [string[]]$Path,
+        [switch]$Check
+    )
+    
+    process {
+        foreach ($file in $Path) {
+            if ($Check) {
+                # 實作檢查功能 (簡化版)
+                Get-Content $file | ForEach-Object {
+                    if ($_ -match "^([a-fA-F0-9]{40})\s+(.+)$") {
+                        $expectedHash = $matches[1].ToLower()
+                        $fileName = $matches[2]
+                        $actualHash = (Get-FileHash -Path $fileName -Algorithm SHA1).Hash.ToLower()
+                        
+                        if ($expectedHash -eq $actualHash) {
+                            Write-Host "${fileName}: OK" -ForegroundColor Green
+                        } else {
+                            Write-Host "${fileName}: FAILED" -ForegroundColor Red
+                        }
+                    }
+                }
+            } else {
+                $files = Get-ChildItem -Path $file -File -ErrorAction SilentlyContinue
+                foreach ($f in $files) {
+                    $hash = Get-FileHash -Path $f.FullName -Algorithm SHA1
+                    Write-Output ($hash.Hash.ToLower() + " " + $f.Name)
+                }
+            }
+        }
+    }
+}
+
+function sha512sum {
+    param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [string[]]$Path,
+        [switch]$Check
+    )
+    
+    process {
+        foreach ($file in $Path) {
+            if ($Check) {
+                Get-Content $file | ForEach-Object {
+                    if ($_ -match "^([a-fA-F0-9]{128})\s+(.+)$") {
+                        $expectedHash = $matches[1].ToLower()
+                        $fileName = $matches[2]
+                        $actualHash = (Get-FileHash -Path $fileName -Algorithm SHA512).Hash.ToLower()
+                        
+                        if ($expectedHash -eq $actualHash) {
+                            Write-Host "${fileName}: OK" -ForegroundColor Green
+                        } else {
+                            Write-Host "${fileName}: FAILED" -ForegroundColor Red
+                        }
+                    }
+                }
+            } else {
+                $files = Get-ChildItem -Path $file -File -ErrorAction SilentlyContinue
+                foreach ($f in $files) {
+                    $hash = Get-FileHash -Path $f.FullName -Algorithm SHA512
+                    Write-Output ($hash.Hash.ToLower() + " " + $f.Name)
+                }
+            }
+        }
+    }
+}
+
+# 通用 hash 函數
+function Get-Hash {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string[]]$Path,
+        
+        [ValidateSet("MD5", "SHA1", "SHA256", "SHA384", "SHA512")]
+        [string]$Algorithm = "SHA256",
+        
+        [switch]$UpperCase
+    )
+    
+    foreach ($file in $Path) {
+        $files = Get-ChildItem -Path $file -File -ErrorAction SilentlyContinue
+        
+        foreach ($f in $files) {
+            try {
+                $hash = Get-FileHash -Path $f.FullName -Algorithm $Algorithm
+                $hashValue = if ($UpperCase) { $hash.Hash } else { $hash.Hash.ToLower() }
+                
+                [PSCustomObject]@{
+                    Algorithm = $Algorithm
+                    Hash = $hashValue
+                    File = $f.Name
+                    Path = $f.FullName
+                }
+            } catch {
+                Write-Warning "無法計算 $($f.Name) 的 hash: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
+# 批次 hash 計算
+function Get-DirectoryHash {
+    param(
+        [string]$Path = ".",
+        [string]$Algorithm = "SHA256",
+        [string]$OutputFile,
+        [switch]$Recursive
+    )
+    
+    $params = @{
+        Path = $Path
+        File = $true
+    }
+    
+    if ($Recursive) {
+        $params.Recurse = $true
+    }
+    
+    $files = Get-ChildItem @params
+    $results = @()
+    
+    foreach ($file in $files) {
+        try {
+            $hash = Get-FileHash -Path $file.FullName -Algorithm $Algorithm
+            $relativePath = Resolve-Path -Path $file.FullName -Relative
+            $result = $hash.Hash.ToLower() + " " + $relativePath.Substring(2) # 移除 ".\"
+            $results += $result
+            
+            Write-Host "Processed: $($file.Name)" -ForegroundColor Green
+        } catch {
+            Write-Warning "無法處理 $($file.Name): $($_.Exception.Message)"
+        }
+    }
+    
+    if ($OutputFile) {
+        $results | Out-File -FilePath $OutputFile -Encoding UTF8
+        Write-Host "Hash 結果已儲存到: $OutputFile" -ForegroundColor Cyan
+    } else {
+        $results | Write-Output
+    }
+}
+
+# 建立別名
+Set-Alias checksum Get-FileHash
+Set-Alias hash Get-Hash
+Set-Alias dirhash Get-DirectoryHash
